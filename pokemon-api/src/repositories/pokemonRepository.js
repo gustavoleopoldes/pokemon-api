@@ -2,7 +2,7 @@
 
 const db = require('../database/database.js');
 
-class PokemonModel {
+class PokemonRepository {
     static listarTodos() {
         return db.prepare('SELECT * FROM pokemons').all();
     }
@@ -14,7 +14,7 @@ class PokemonModel {
     static buscarPorTipo(tipo) {
         return db.prepare(
             'SELECT * FROM pokemons WHERE type LIKE ?'
-        ).all(`%${tipo}%`);
+        ).all(`%${tipo}`);
     }
 
     static maisFortes() {
@@ -25,7 +25,7 @@ class PokemonModel {
 
     static resumoEstatisticas() {
         return db.prepare(`
-            SELECT 
+            SELECT
                 COUNT(*) as total,
                 ROUND(AVG(hp), 1) as media_hp,
                 ROUND(AVG(attack), 1) as media_attack,
@@ -41,6 +41,7 @@ class PokemonModel {
         const query = db.prepare(
             'INSERT INTO pokemons (poke_id, name, type, hp, attack, defense, sprite) VALUES (?, ?, ?, ?, ?, ?, ?)'
         );
+
         return query.run(
             pokemon.poke_id,
             pokemon.name,
@@ -70,15 +71,15 @@ class PokemonModel {
                         pokemon.defense,
                         pokemon.sprite
                     );
-                    resultados.push({ 
-                        name: pokemon.name, 
-                        salvo: resultado.changes > 0 
+                    resultados.push({
+                        name: pokemon.name,
+                        salvo: resultado.changes > 0
                     });
                 } catch (erro) {
-                    resultados.push({ 
-                        name: pokemon.name, 
-                        salvo: false, 
-                        erro: 'Já existe no banco' 
+                    resultados.push({
+                        name: pokemon.name,
+                        salvo: false,
+                        erro: 'Já existe no banco'
                     });
                 }
             }
@@ -89,56 +90,25 @@ class PokemonModel {
     }
 
     static atualizar(id, dados) {
-        const pokemonExiste = this.buscarPorId(id);
-        if (!pokemonExiste) return null;
-
         const query = db.prepare(
             'UPDATE pokemons SET name = ?, type = ?, hp = ?, attack = ?, defense = ? WHERE id = ?'
         );
-        query.run(
-            dados.name || pokemonExiste.name,
-            dados.type || pokemonExiste.type,
-            dados.hp || pokemonExiste.hp,
-            dados.attack || pokemonExiste.attack,
-            dados.defense || pokemonExiste.defense,
-            id
-        );
-        return this.buscarPorId(id);
-    }
-
-    static atualizarParcial(id, campos) {
-        const pokemonExiste = this.buscarPorId(id);
-        if (!pokemonExiste) return null;
-
-        const camposPermitidos = ['name', 'type', 'hp', 'attack', 'defense'];
-        const camposValidos = {};
-
-        for (const campo of camposPermitidos) {
-            if (campos[campo] !== undefined) {
-                camposValidos[campo] = campos[campo];
-            }
+        return query.run(dados.name, dados.type, dados.hp, dados.attack, dados.defense, id);
         }
 
-        if (Object.keys(camposValidos).length === 0) return false;
+        static atualizarParcial(id, campos) {
+            const setClause = Object.keys(campos)
+                .map(key => `${key} = ?`)
+                .join(', ');
+            const values = Object.values(campos);
+            
+            return db.prepare(`UPDATE pokemons SET ${setClause} WHERE id = ?`)
+                .run(...values, id);
+        }
 
-        const setClause = Object.keys(camposValidos)
-            .map(key => `${key} = ?`)
-            .join(', ');
-        const values = Object.values(camposValidos);
-
-        db.prepare(`UPDATE pokemons SET ${setClause} WHERE id = ?`)
-            .run(...values, id);
-
-        return this.buscarPorId(id);
-    }
-
-        static deletar(id) {
-        const pokemon = this.buscarPorId(id);
-        if (!pokemon) return null;
-
-        db.prepare('DELETE FROM pokemons WHERE id = ?').run(id);
-        return pokemon;
+    static deletar(id) {
+        return db.prepare('DELETE FROM pokemons WHERE id = ?').run(id);
     }
 }
 
-module.exports = PokemonModel;
+module.exports = PokemonRepository;

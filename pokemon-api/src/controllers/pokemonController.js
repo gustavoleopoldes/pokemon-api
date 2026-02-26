@@ -1,175 +1,95 @@
 
-const PokemonModel = require('../models/pokemonModel.js');
+const PokemonService = require('../services/pokemonService.js');
 const PokemonView = require('../views/pokemonView.js');
 const { buscarPokemonNaApi, buscarVariosPokemonsNaApi } = require('../services/pokeApiService.js');
 
 async function salvar(req, res) {
     try {
-        const { name } = req.body;
-
-        if (!name) {
-            return PokemonView.erro(res, 'Envie o campo "name"', 400);
-        }
-
-        const pokemon = await buscarPokemonNaApi(name);
-        const resultado = PokemonModel.salvar(pokemon);
-
-        return PokemonView.criado(res, { id: resultado.lastInsertRowid, ...pokemon });
+        const pokemon = await PokemonService.salvar(req.body.name);
+        return PokemonView.criado(res, pokemon);
     } catch (erro) {
-        if (erro.response && erro.response.status === 404) {
-            return PokemonView.naoEncontrado(res, 'Pokemon nao encontrado na PokeAPI');
-        }
-        if (erro.code === 'SQLITE_CONSTRAINT_UNIQUE') {
-            return PokemonView.conflito(res);
-        }
-        console.error(erro);
-        return PokemonView.erro(res, 'Erro interno do servidor');
+        return PokemonView.erro(res, erro.message, erro.status);
     }
 }
 
 async function importarVarios(req, res) {
     try {
-        const { nomes } = req.body;
-
-        if (!nomes || !Array.isArray(nomes) || nomes.length === 0) {
-            return PokemonView.erro(res, 'Envie um array "nomes" com os nomes dos pokémons', 400);
-        }
-
-        if (nomes.length > 20) {
-            return PokemonView.erro(res, 'Máximo de 20 pokémons por vez', 400);
-        }
-
-        const { sucesso, falhas } = await buscarVariosPokemonsNaApi(nomes);
-        const resultados = PokemonModel.salvarVarios(sucesso);
-
-        const todosResultados = [
-            ...resultados,
-            ...falhas.map(f => ({ name: f.nome, salvo: false, erro: f.erro }))
-        ];
-
-        return PokemonView.importados(res, todosResultados);
+        const resultados = await PokemonService.importarVarios(req.body.nomes);
+        return PokemonView.importados(res, resultados);
     } catch (erro) {
-        console.error(erro);
-        return PokemonView.erro(res, 'Erro ao importar pokémons');
+        return PokemonView.erro(res, erro.message, erro.status);
     }
 }
 
 function listarTodos(req, res) {
     try {
-        const pokemons = PokemonModel.listarTodos();
+        const pokemons = PokemonService.listarTodos();
         return PokemonView.lista(res, pokemons);
     } catch (erro) {
-        console.error(erro);
-        return PokemonView.erro(res, 'Erro ao buscar pokemons');
+        return PokemonView.erro(res, erro.message, erro.status);
     }
 }
 
 function buscarPorId(req, res) {
     try {
-        const { id } = req.params;
-        const pokemon = PokemonModel.buscarPorId(id);
-
-        if (!pokemon) {
-            return PokemonView.naoEncontrado(res);
-        }
-
+        const pokemon = PokemonService.buscarPorId(req.params.id);
         return PokemonView.sucesso(res, pokemon);
     } catch (erro) {
-        console.error(erro);
-        return PokemonView.erro(res, 'Erro ao buscar pokemon');
+        return PokemonView.erro(res, erro.message, erro.status);
     }
 }
 
 function buscarPorTipo(req, res) {
     try {
-        const { tipo } = req.params;
-        const pokemons = PokemonModel.buscarPorTipo(tipo);
-
-        if (pokemons.length === 0) {
-            return PokemonView.naoEncontrado(res, `Nenhum pokemon do tipo "${tipo}" encontrado`);
-        }
-
+        const pokemons = PokemonService.buscarPorTipo(req.params.tipo);
         return PokemonView.lista(res, pokemons);
     } catch (erro) {
-        console.error(erro);
-        return PokemonView.erro(res, 'Erro ao buscar pokemons por tipo');
+        return PokemonView.erro(res, erro.message, erro.status);
     }
 }
 
 function maisFortes(req, res) {
     try {
-        const pokemons = PokemonModel.maisFortes();
-
-        if (pokemons.length === 0) {
-            return PokemonView.naoEncontrado(res, 'Nenhum pokemon cadastrado ainda');
-        }
-
+        const pokemons = PokemonService.maisFortes();
         return PokemonView.lista(res, pokemons);
     } catch (erro) {
-        console.error(erro);
-        return PokemonView.erro(res, 'Erro ao buscar pokemons mais fortes');
+        return PokemonView.erro(res, erro.message, erro.status);
     }
 }
 
 function resumoEstatisticas(req, res) {
     try {
-        const stats = PokemonModel.resumoEstatisticas();
+        const stats = PokemonService.resumoEstatisticas();
         return PokemonView.estatisticas(res, stats);
     } catch (erro) {
-        console.error(erro);
-        return PokemonView.erro(res, 'Erro ao buscar estatísticas');
+        return PokemonView.erro(res, erro.message, erro.status);
     }
 }
 
 function atualizar(req, res) {
     try {
-        const { id } = req.params;
-        const pokemon = PokemonModel.atualizar(id, req.body);
-
-        if (!pokemon) {
-            return PokemonView.naoEncontrado(res);
-        }
-
+        const pokemon = PokemonService.atualizar(req.params.id, req.body);
         return PokemonView.atualizado(res, pokemon);
     } catch (erro) {
-        console.error(erro);
-        return PokemonView.erro(res, 'Erro ao atualizar pokemon');
+        return PokemonView.erro(res, erro.message, erro.status);
     }
 }
 
 function atualizarParcial(req, res) {
     try {
-        const { id } = req.params;
-        const resultado = PokemonModel.atualizarParcial(id, req.body);
-
-        if (resultado === null) {
-            return PokemonView.naoEncontrado(res);
-        }
-
-        if (resultado === false) {
-            return PokemonView.erro(res, 'Nenhum campo válido para atualizar. Campos: name, type, hp, attack, defense', 400);
-        }
-
-        return PokemonView.atualizado(res, resultado);
+        const pokemon = PokemonService.atualizarParcial(req.params.id, req.body);
+        return PokemonView.atualizado(res, pokemon);
     } catch (erro) {
-        console.error(erro);
-        return PokemonView.erro(res, 'Erro ao atualizar pokemon');
+        return PokemonView.erro(res, erro.message, erro.status);
     }
 }
 
 function deletar(req, res) {
     try {
-        const { id } = req.params;
-        const pokemon = PokemonModel.deletar(id);
-
-        if (!pokemon) {
-            return PokemonView.naoEncontrado(res);
-        }
-
+        const pokemon = PokemonService.deletar(req.params.id);
         return PokemonView.deletado(res, pokemon);
     } catch (erro) {
-        console.error(erro);
-        return PokemonView.erro(res, 'Erro ao deletar pokemon');
+        return PokemonView.erro(res, erro.message, erro.status);
     }
 }
 
