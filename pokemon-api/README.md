@@ -1,15 +1,4 @@
 
-Endpoints:
 
-Método      	Endpoint	                         Descrição
-GET	               /	                            Status da API
-POST	        /pokemons	                Salvar pokémon (busca na PokeAPI)
-POST	  /pokemons/importar-varios	            Importar vários pokémons
-GET	            /pokemons	                        Listar todos
-GET	           /pokemons/:id	                    Buscar por ID
-GET	        /pokemons/tipo/:tipo	                Buscar por tipo
-GET	        /pokemons/mais-fortes	               Top 5 mais fortes
-GET	        /pokemons/stats/resumo	              Estatísticas gerais
-PUT	           /pokemons/:id	                   Atualizar completo
-PATCH	       /pokemons/:id	                 Atualizar parcialmente
-DELETE	       /pokemons/:id	                    Deletar pokémon
+
+<img width="970" height="620" alt="image" src="https://github.com/user-attachments/assets/2220945e-028f-4258-9b9e-5bf583d1e955" />
