@@ -4,3 +4,4 @@ node_modules/
 pokemon.db
 .env
 .DS_Store
+coverage/
